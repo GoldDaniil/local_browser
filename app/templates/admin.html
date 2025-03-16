@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="eng, ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            margin: 20px auto;
+        }
+        th, td {
+            border: 1px solid #aaa;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h2>Admin Panel</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user[0] }}</td>
+                <td>{{ user[1] }}</td>
+                <td>{{ user[2] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+
+    <a href="/">back to home</a>
+</body>
+</html>

@@ -1,25 +1,37 @@
 <!DOCTYPE html>
 <html lang="eng, ru">
-    <head>
-        <meta charset="UTF-8">
-        <title>Register</title>
-        <link rel="stylesheet" href="/static/style.css">
-    </head>
-    <body>
-        <h2>Register</h2>
+<head>
+    <meta charset="UTF-8">
+    <title>Register</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const form = document.querySelector("form");
+            const usernameInput = document.querySelector('input[name="username"]');
+            form.addEventListener("submit", function(e) {
+                if (usernameInput.value.trim().toLowerCase() === "admin") {
+                    e.preventDefault();
+                    alert("Невозможно зарегистрировать учетную запись администратора. Админ создается вручную.");
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h2>Register</h2>
+    <p style="color:red;">Внимание: учетная запись администратора (admin) может быть создана только вручную через код или терминал.</p>
 
-        {% if error %}
-            <p style="color:red;">{{ error }}</p>
-        {% endif %}
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
 
-        <form action="/register" method="post">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <button type="submit">Register</button>
-        </form>
+    <form action="/register" method="post">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <button type="submit">Register</button>
+    </form>
 
-        <a href="/">back to home</a>
-
-    </body>
+    <a href="/">back to home</a>
+</body>
 </html>

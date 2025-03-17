@@ -1,1 +1,1 @@
-коммит initial commit в 17-49 первый успешный : работает постгря
+инструкция в local_browser_private.git

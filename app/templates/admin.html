@@ -18,6 +18,35 @@
         th {
             background-color: #ddd;
         }
+        .action-btn {
+            padding: 4px 8px;
+            margin: 2px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .edit-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .cancel-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        .add-user-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -28,20 +57,65 @@
                 <th>ID</th>
                 <th>Username</th>
                 <th>Email</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for user in users %}
-            <tr>
+            <tr id="user-row-{{ user[0] }}">
                 <td>{{ user[0] }}</td>
-                <td>{{ user[1] }}</td>
-                <td>{{ user[2] }}</td>
+                <td id="username-{{ user[0] }}">{{ user[1] }}</td>
+                <td id="email-{{ user[0] }}">{{ user[2] }}</td>
+                <td id="actions-{{ user[0] }}">
+                    {% if user[1] != 'admin' %}
+                        <button class="action-btn edit-btn" onclick="enableEdit({{ user[0] }}, '{{ user[1] }}', '{{ user[2] }}')">Edit</button>
+                        <form action="/delete_user/{{ user[0] }}" method="post" style="display:inline;">
+                            <button type="submit" class="action-btn delete-btn">Delete</button>
+                        </form>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
+    <form action="/add_user" method="get">
+        <button type="submit" class="add-user-btn">Add User</button>
+    </form>
 
     <a href="/">back to home</a>
+
+    <script>
+        function enableEdit(userId, currentUsername, currentEmail) {
+            document.getElementById('username-' + userId).innerHTML = `<input type="text" id="edit-username-${userId}" value="" placeholder="${currentUsername}">`;
+            document.getElementById('email-' + userId).innerHTML = `<input type="email" id="edit-email-${userId}" value="" placeholder="${currentEmail}">`;
+
+            document.getElementById('actions-' + userId).innerHTML = `
+                <form action="/edit_user/${userId}" method="post" style="display:inline;">
+                    <input type="hidden" name="username" id="form-username-${userId}">
+                    <input type="hidden" name="email" id="form-email-${userId}">
+                    <button type="button" class="action-btn edit-btn" onclick="submitEdit(${userId})">Save</button>
+                </form>
+                <button class="action-btn cancel-btn" onclick="cancelEdit(${userId}, '${currentUsername}', '${currentEmail}')">X</button>
+            `;
+        }
+
+        function submitEdit(userId) {
+            document.getElementById(`form-username-${userId}`).value = document.getElementById(`edit-username-${userId}`).value;
+            document.getElementById(`form-email-${userId}`).value = document.getElementById(`edit-email-${userId}`).value;
+            document.querySelector(`#actions-${userId} form`).submit();
+        }
+
+        function cancelEdit(userId, username, email) {
+            document.getElementById('username-' + userId).innerText = username;
+            document.getElementById('email-' + userId).innerText = email;
+            document.getElementById('actions-' + userId).innerHTML = `
+                <button class="action-btn edit-btn" onclick="enableEdit(${userId}, '${username}', '${email}')">Edit</button>
+                <form action="/delete_user/${userId}" method="post" style="display:inline;">
+                    <button type="submit" class="action-btn delete-btn">Delete</button>
+                </form>
+            `;
+        }
+    </script>
 </body>
 </html>

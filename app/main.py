@@ -1,15 +1,19 @@
 from fastapi import FastAPI, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import psycopg2
 import bcrypt
+import subprocess
+import re
+from pyvis.network import Network
+import os
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-def get_db_connection():
+def get_db_connection():#подключение к бд
     return psycopg2.connect(
         dbname="auth_db",
         user="user",
@@ -17,6 +21,35 @@ def get_db_connection():
         host="db",
         port="5432"
     )
+
+def get_network_devices():#получение устройств из сети
+    result = subprocess.run(['arp', '-a'], capture_output=True, text=True)
+    devices = []
+    arp_output = result.stdout
+
+    pattern = re.compile(r'\? \((\d+\.\d+\.\d+\.\d+)\) at ((?:[\da-f]{1,2}:){5}[\da-f]{1,2}|incomplete)', re.IGNORECASE)
+    for line in arp_output.splitlines():
+        match = pattern.search(line)
+        if match:
+            ip, mac = match.groups()
+            devices.append({"ip": ip, "mac": mac if mac != 'incomplete' else 'N/A'})
+    return devices
+
+def create_network_map():#cоздание и сохранение карты сети
+    devices = get_network_devices()
+    net = Network(height='600px', width='100%', bgcolor='#222222', font_color='white')
+    net.add_node('Router', label='Router', color='red')
+
+    for device in devices:
+        label = f"IP: {device['ip']}\nMAC: {device['mac']}"
+        net.add_node(device['ip'], label=label, color='blue')
+        net.add_edge('Router', device['ip'])
+
+    net.save_graph('templates/network_map.html')
+
+@app.on_event("startup")
+def startup_event():
+    create_network_map()
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -84,6 +117,10 @@ def admin_panel(request: Request):
     cur.close()
     conn.close()
     return templates.TemplateResponse("admin.html", {"request": request, "users": users})
+
+@app.get("/network_map", response_class=HTMLResponse)
+def network_map(request: Request):
+    return templates.TemplateResponse("network_map.html", {"request": request})
 
 @app.post("/delete_user/{user_id}")
 def delete_user(user_id: int):

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import psycopg2
@@ -13,7 +13,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-def get_db_connection():#подключение к бд
+def get_db_connection():
     return psycopg2.connect(
         dbname="auth_db",
         user="user",
@@ -22,7 +22,7 @@ def get_db_connection():#подключение к бд
         port="5432"
     )
 
-def get_network_devices():#получение устройств из сети
+def get_network_devices():
     result = subprocess.run(['arp', '-a'], capture_output=True, text=True)
     devices = []
     arp_output = result.stdout
@@ -35,17 +35,39 @@ def get_network_devices():#получение устройств из сети
             devices.append({"ip": ip, "mac": mac if mac != 'incomplete' else 'N/A'})
     return devices
 
-def create_network_map():#cоздание и сохранение карты сети
+def create_network_map():
     devices = get_network_devices()
     net = Network(height='600px', width='100%', bgcolor='#222222', font_color='white')
-    net.add_node('Router', label='Router', color='red')
+
+    # Добавляем два центральных узла
+    net.add_node('Router', label='Router', color='red', shape='dot', size=20)
+    net.add_node('Gateway', label='Gateway', color='green', shape='dot', size=20)
 
     for device in devices:
+        # Определяем цвет узла в зависимости от наличия MAC-адреса
+        color = 'blue' if device['mac'] != 'N/A' else 'gray'
         label = f"IP: {device['ip']}\nMAC: {device['mac']}"
-        net.add_node(device['ip'], label=label, color='blue')
-        net.add_edge('Router', device['ip'])
 
+        # Добавляем узел устройства
+        net.add_node(device['ip'], label=label, color=color, shape='dot', size=15)
+
+        # Привязываем узел к "Router" или "Gateway" в зависимости от условия
+        if device['mac'] != 'N/A':
+            net.add_edge('Router', device['ip'])
+        else:
+            net.add_edge('Gateway', device['ip'])
+
+    # Сохраняем граф с кастомным контейнером
     net.save_graph('templates/network_map.html')
+    with open('templates/network_map.html', 'r+') as f:
+        content = f.read()
+        f.seek(0)
+        f.write(f"""
+        <div style='height:600px; width:100%; background-color:#222222;'>
+            {content}
+        </div>
+        """)
+        f.truncate()
 
 @app.on_event("startup")
 def startup_event():
@@ -92,19 +114,13 @@ def login(request: Request):
 def login_user(username: str = Form(...), password: str = Form(...)):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT username, password FROM users WHERE username = %s",
-        (username,)
-    )
+    cur.execute("SELECT username, password FROM users WHERE username = %s", (username,))
     user = cur.fetchone()
     cur.close()
     conn.close()
 
     if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
-        if username == "admin":
-            return RedirectResponse("/admin", status_code=303)
-        else:
-            return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/admin" if username == "admin" else "/", status_code=303)
     else:
         return RedirectResponse("/login?error=Invalid+credentials", status_code=303)
 

@@ -8,10 +8,15 @@ import subprocess
 import re
 from pyvis.network import Network
 import os
-from starlette.middleware.sessions import SessionMiddleware#добавлена поддержка сессий
+from starlette.middleware.sessions import SessionMiddleware  # добавлена поддержка сессий
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="a3f1c8d4e5f6a7b8c9d0e")
+
+# БАГ!!! ПРИОРИТЕТ - на http://localhost:8000/main могу зайти в main.html по любому юзеру и админу - но
+# зайти на http://192.168.0.199:8000 на леново не получается - баг - пароли и логины корректные
+#
+# FastAPI сохраняет сессию! тк в куки на леново http://192.168.0.199:8000 а на маке http://localhost:8000/main
 
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -24,6 +29,8 @@ def get_db_connection():#подключение к бд
         host="db",
         port="5432"
     )
+
+
 
 def get_network_devices():#получение устройств из сети
     result = subprocess.run(['arp', '-a'], capture_output=True, text=True)

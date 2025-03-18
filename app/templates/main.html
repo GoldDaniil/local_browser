@@ -10,13 +10,13 @@
             var toggleIcon = document.getElementById("togglePassword");
 
             if (passwordField.dataset.visible === "false") {
-                passwordField.innerText = passwordField.dataset.realPassword;
+                passwordField.innerText = passwordField.dataset.realPassword;  // показать реальный пароль
                 passwordField.dataset.visible = "true";
-                toggleIcon.innerText = "🙈";
+                toggleIcon.innerText = "🙈"; // иконка скрытия
             } else {
-                passwordField.innerText = "•".repeat(passwordField.dataset.realPassword.length);
+                passwordField.innerText = "•".repeat(passwordField.dataset.realPassword.length); // вернуть звездочки
                 passwordField.dataset.visible = "false";
-                toggleIcon.innerText = "👁️";
+                toggleIcon.innerText = "👁️"; // иконка показа
             }
         }
     </script>
@@ -24,7 +24,12 @@
 <body>
     <h2>Welcome, {{ username }}</h2>
     <p>Email: {{ email }}</p>
-    <p>Password:</p>
+    <p>Password:
+        <span id="passwordField" data-real-password="{{ password }}" data-visible="false">
+            {{ "•" * password|length }}
+        </span>
+        <span id="togglePassword" onclick="togglePassword()" style="cursor: pointer;">👁️</span>
+    </p>
     <a href="/">Logout</a>
 </body>
 </html>

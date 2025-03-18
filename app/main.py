@@ -8,8 +8,10 @@ import subprocess
 import re
 from pyvis.network import Network
 import os
+from starlette.middleware.sessions import SessionMiddleware#добавлена поддержка сессий
 
 app = FastAPI()
+app.add_middleware(SessionMiddleware, secret_key="a3f1c8d4e5f6a7b8c9d0e")
 
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -93,7 +95,7 @@ def login(request: Request):
     return templates.TemplateResponse("login.html", {"request": request, "error": error})
 
 @app.post("/login")
-def login_user(username: str = Form(...), password: str = Form(...)):
+def login_user(request: Request, username: str = Form(...), password: str = Form(...)):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT username, email, password FROM users WHERE username = %s", (username,))
@@ -102,16 +104,22 @@ def login_user(username: str = Form(...), password: str = Form(...)):
     conn.close()
 
     if user and bcrypt.checkpw(password.encode('utf-8'), user[2].encode('utf-8')):
-        response = RedirectResponse(url=f"/main?username={username}", status_code=303)
-        return response
+        request.session["username"] = username
+        return RedirectResponse(url="/main", status_code=303)
     else:
         return RedirectResponse(url="/login?error=Invalid+credentials", status_code=303)
 
 @app.get("/main", response_class=HTMLResponse)
-def main_page(request: Request, username: str):
+def main_page(request: Request):
+    username = request.session.get("username")
+    password = request.session.get("password")#получаем пароль из сессии
+
+    if not username or not password:
+        return RedirectResponse(url="/login", status_code=303)
+
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT username, email, password FROM users WHERE username = %s", (username,))
+    cur.execute("SELECT username, email FROM users WHERE username = %s", (username,))
     user = cur.fetchone()
     cur.close()
     conn.close()
@@ -121,21 +129,52 @@ def main_page(request: Request, username: str):
             "request": request,
             "username": user[0],
             "email": user[1],
-            "password": "****"
+            "password": password #передаем пароль в main.html
         })
     else:
         return RedirectResponse(url="/login", status_code=303)
 # тестируем main.html
 
+# тестируем вход для админа
+
+@app.get("/adminlogin", response_class=HTMLResponse)
+def admin_login(request: Request):
+    error = request.query_params.get("error")
+    return templates.TemplateResponse("adminlogin.html", {"request": request, "error": error})
+
+@app.post("/adminlogin")
+def admin_login_user(request: Request, username: str = Form(...), password: str = Form(...)):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT password FROM users WHERE username = %s", ("admin",))  #находим админа в базе
+    admin = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if admin and bcrypt.checkpw(password.encode('utf-8'), admin[0].encode('utf-8')):  # сраввниваем хэшированный пароль
+        request.session["admin"] = "admin"  # метка - что админ вошел
+        return RedirectResponse(url="/admin", status_code=303)
+    else:
+        return RedirectResponse(url="/adminlogin?error=Invalid+credentials", status_code=303)
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_panel(request: Request):
+    admin = request.session.get("admin")
+    if not admin:
+        return RedirectResponse(url="/adminlogin", status_code=303)
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id, username, email FROM users")
     users = cur.fetchall()
     cur.close()
     conn.close()
+
     return templates.TemplateResponse("admin.html", {"request": request, "users": users})
+
+
+# тестируем вход для админа
+
 
 @app.get("/network_map", response_class=HTMLResponse)
 def network_map(request: Request):

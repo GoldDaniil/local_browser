@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        function togglePassword() {
+            var passwordField = document.getElementById("passwordField");
+            var toggleIcon = document.getElementById("togglePassword");
+
+            if (passwordField.dataset.visible === "false") {
+                passwordField.innerText = passwordField.dataset.realPassword;
+                passwordField.dataset.visible = "true";
+                toggleIcon.innerText = "🙈";
+            } else {
+                passwordField.innerText = "•".repeat(passwordField.dataset.realPassword.length);
+                passwordField.dataset.visible = "false";
+                toggleIcon.innerText = "👁️";
+            }
+        }
+    </script>
+</head>
+<body>
+    <h2>Welcome, {{ username }}</h2>
+    <p>Email: {{ email }}</p>
+    <p>Password:</p>
+    <a href="/">Logout</a>
+</body>
+</html>

@@ -10,6 +10,7 @@ from pyvis.network import Network
 import os
 
 app = FastAPI()
+
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -83,6 +84,9 @@ def register_user(username: str = Form(...), password: str = Form(...), email: s
         conn.close()
     return RedirectResponse("/", status_code=303)
 
+
+
+# тестируем main.html
 @app.get("/login", response_class=HTMLResponse)
 def login(request: Request):
     error = request.query_params.get("error")
@@ -92,21 +96,36 @@ def login(request: Request):
 def login_user(username: str = Form(...), password: str = Form(...)):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT username, password FROM users WHERE username = %s",
-        (username,)
-    )
+    cur.execute("SELECT username, email, password FROM users WHERE username = %s", (username,))
     user = cur.fetchone()
     cur.close()
     conn.close()
 
-    if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
-        if username == "admin":
-            return RedirectResponse("/admin", status_code=303)
-        else:
-            return RedirectResponse("/", status_code=303)
+    if user and bcrypt.checkpw(password.encode('utf-8'), user[2].encode('utf-8')):
+        response = RedirectResponse(url=f"/main?username={username}", status_code=303)
+        return response
     else:
-        return RedirectResponse("/login?error=Invalid+credentials", status_code=303)
+        return RedirectResponse(url="/login?error=Invalid+credentials", status_code=303)
+
+@app.get("/main", response_class=HTMLResponse)
+def main_page(request: Request, username: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT username, email, password FROM users WHERE username = %s", (username,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if user:
+        return templates.TemplateResponse("main.html", {
+            "request": request,
+            "username": user[0],
+            "email": user[1],
+            "password": "****"
+        })
+    else:
+        return RedirectResponse(url="/login", status_code=303)
+# тестируем main.html
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_panel(request: Request):

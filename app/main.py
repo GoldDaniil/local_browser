@@ -147,6 +147,7 @@ def admin_login(request: Request):
     error = request.query_params.get("error")
     return templates.TemplateResponse("adminlogin.html", {"request": request, "error": error})
 
+
 @app.post("/adminlogin")
 def admin_login_user(request: Request, username: str = Form(...), password: str = Form(...)):
     conn = get_db_connection()

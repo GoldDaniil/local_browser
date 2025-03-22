@@ -30,6 +30,20 @@
         </span>
         <span id="togglePassword" onclick="togglePassword()" style="cursor: pointer;">👁️</span>
     </p>
+
+    <a href="/users">Open Messenger</a>
+
+    <h3>Chat with other users:</h3>
+    <ul>
+        {% for user in users %}
+            {% if user[0] != username %}
+                <li><a href="/get_messages/{{ user[0] }}">{{ user[0] }}</a></li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+
+
+
     <a href="/">Logout</a>
 </body>
 </html>

@@ -229,3 +229,65 @@ def add_user(username: str = Form(...), password: str = Form(...), email: str = 
     cur.close()
     conn.close()
     return RedirectResponse("/admin", status_code=303)
+
+
+
+
+
+
+
+
+@app.get("/get_messages/{receiver}", response_class=HTMLResponse)
+def get_messages(request: Request, receiver: str):
+    sender = request.session.get("username")
+    if not sender:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT sender_username, message, timestamp
+        FROM messages
+        WHERE (sender_username = %s AND receiver_username = %s)
+           OR (sender_username = %s AND receiver_username = %s)
+        ORDER BY timestamp ASC
+    """, (sender, receiver, receiver, sender))
+    messages = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return templates.TemplateResponse("chat.html", {
+        "request": request,
+        "messages": messages,
+        "receiver": receiver
+    })
+
+
+@app.post("/send_message")
+def send_message(request: Request, receiver: str = Form(...), message: str = Form(...)):
+    sender = request.session.get("username")
+    if not sender:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO messages (sender_username, receiver_username, message)
+        VALUES (%s, %s, %s)
+    """, (sender, receiver, message))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return RedirectResponse(f"/get_messages/{receiver}", status_code=303)
+
+@app.get("/users", response_class=HTMLResponse)
+def list_users(request: Request):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT username FROM users WHERE username != %s", (request.session.get("username"),))
+    users = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return templates.TemplateResponse("users.html", {"request": request, "users": users})

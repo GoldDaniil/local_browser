@@ -13,10 +13,8 @@ from starlette.middleware.sessions import SessionMiddleware  # добавлен�
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="a3f1c8d4e5f6a7b8c9d0e")
 
-# БАГ!!! ПРИОРИТЕТ - на http://localhost:8000/main могу зайти в main.html по любому юзеру и админу - но
-# зайти на http://192.168.0.199:8000 на леново не получается - баг - пароли и логины корректные
-#
-# FastAPI сохраняет сессию! тк в куки на леново http://192.168.0.199:8000 а на маке http://localhost:8000/main
+# БАГ ПОФИКСИЛ!:
+# БАГ!!! ПРИОРИТЕТ - на http://localhost:8000/main могу зайти в main.html по любому юзеру и админу - но зайти на http://192.168.0.199:8000 на леново не получается - баг - пароли и логины корректные FastAPI сохраняет сессию! тк в куки на леново http://192.168.0.199:8000 а на маке http://localhost:8000/main
 
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -29,7 +27,6 @@ def get_db_connection():#подключение к бд
         host="db",
         port="5432"
     )
-
 
 
 def get_network_devices():#получение устройств из сети
@@ -119,9 +116,9 @@ def login_user(request: Request, username: str = Form(...), password: str = Form
 @app.get("/main", response_class=HTMLResponse)
 def main_page(request: Request):
     username = request.session.get("username")
-    password = request.session.get("password")#получаем пароль из сессии
+    #убрал получение password из сессии - можно подумать над тем чтобы показывать его в хешированно виде - хотя лучше не стоит
 
-    if not username or not password:
+    if not username:
         return RedirectResponse(url="/login", status_code=303)
 
     conn = get_db_connection()
@@ -136,14 +133,15 @@ def main_page(request: Request):
             "request": request,
             "username": user[0],
             "email": user[1],
-            "password": password #передаем пароль в main.html
+            #подумать над тем что если рил нужен пароль для отображения - можно передать -
+            #но лучше не хранить его в сессии и не показывать даже в зашифрованном виде
+            "password": "•" * 8
         })
     else:
         return RedirectResponse(url="/login", status_code=303)
 # тестируем main.html
 
 # тестируем вход для админа
-
 @app.get("/adminlogin", response_class=HTMLResponse)
 def admin_login(request: Request):
     error = request.query_params.get("error")
